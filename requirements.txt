@@ -1,0 +1,8 @@
+streamlit
+torch
+torchvision
+timm
+ultralytics
+pillow
+pandas
+scikit-learn
