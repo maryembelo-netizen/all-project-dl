@@ -35,6 +35,7 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
+
 # =========================
 # LOAD MODELS
 # =========================
@@ -45,13 +46,10 @@ def load_vit():
         pretrained=False,
         num_classes=3
     )
-
     model.load_state_dict(
         torch.load(vit_path, map_location=device)
     )
-
     model.eval()
-
     return model
 
 
@@ -89,10 +87,9 @@ st.sidebar.dataframe(stats)
 tab1, tab2 = st.tabs(["Inference", "Comparison"])
 
 # ==================================================
-# TAB 1
+# TAB 1 : INFERENCE
 # ==================================================
 with tab1:
-
     uploaded_file = st.file_uploader(
         "Upload image",
         type=["jpg", "jpeg", "png"]
@@ -119,23 +116,25 @@ with tab1:
 
         # ================= VIT =================
         if model_choice in ["ViT", "Both"]:
-
             start = time.time()
 
             with torch.no_grad():
-
                 output = vit_model(img)
-
-                _, pred = torch.max(output, 1)
+                # Application de Softmax pour extraire les probabilités de confiance
+                probabilities = torch.nn.functional.softmax(output, dim=1)
+                conf_vit, pred = torch.max(probabilities, 1)
 
             vit_time = time.time() - start
-
             label_vit = classes[pred.item()]
+            confidence_score_vit = conf_vit.item()
 
             col1.subheader("ViT Prediction")
-
             col1.success(label_vit)
 
+            # Affichage de la confiance pour ViT aligné sur YOLO
+            col1.info(
+                f"Confidence : {confidence_score_vit:.3f}"
+            )
             col1.info(
                 f"Inference time : {vit_time:.4f} sec"
             )
@@ -144,39 +143,30 @@ with tab1:
         if model_choice in ["YOLO", "Both"]:
 
             start = time.time()
-
             results = yolo_model(image)
-
             probs = results[0].probs
-
             top1 = int(probs.top1)
-
-            conf = float(probs.top1conf)
-
+            conf_yolo = float(probs.top1conf)
             yolo_time = time.time() - start
 
-            if conf < 0.5:
+            if conf_yolo < 0.5:
                 label_yolo = "Unknown object"
             else:
                 label_yolo = classes[top1]
 
             col2.subheader("YOLO Prediction")
-
             col2.success(label_yolo)
-
             col2.info(
-                f"Confidence : {conf:.3f}"
+                f"Confidence : {conf_yolo:.3f}"
             )
-
             col2.info(
                 f"Inference time : {yolo_time:.4f} sec"
             )
 
 # ==================================================
-# TAB 2
+# TAB 2 : COMPARISON
 # ==================================================
 with tab2:
-
     st.subheader("Model Comparison")
 
     comparison = pd.DataFrame({
