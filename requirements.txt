@@ -3,6 +3,7 @@ torch
 torchvision
 timm
 ultralytics
-pillow
+opencv-python-headless
 pandas
-scikit-learn
+pillow
+numpy
