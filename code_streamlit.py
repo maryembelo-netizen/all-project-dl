@@ -122,9 +122,10 @@ with tab1:
             start = time.time()
             with torch.no_grad():
                 output = vit_model(img)
-                probabilities = torch.softmax(output, dim=1)
+                probs = torch.softmax(output, dim=1)
+                conf_vit, pred_vit = torch.max(probs, 1)
             vit_time = time.time() - start
-            pred_idx = pred.item()
+            pred_idx = pred_vit.item()
             vit_conf = conf.item()
             label_vit = classes[pred_idx]
             col1.subheader("🧠 ViT Prediction")
