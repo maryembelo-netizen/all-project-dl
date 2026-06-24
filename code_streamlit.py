@@ -119,29 +119,27 @@ with tab1:
 
         # ================= VIT =================
         if model_choice in ["ViT", "Both"]:
+
             start = time.time()
+
             with torch.no_grad():
+
                 output = vit_model(img)
-                probs = torch.softmax(output, dim=1)
-                conf_vit, pred_vit = torch.max(probs, 1)
+
+                _, pred = torch.max(output, 1)
+
             vit_time = time.time() - start
-            pred_idx = pred_vit.item()
-            vit_conf = conf.item()
-            label_vit = classes[pred_idx]
-            col1.subheader("🧠 ViT Prediction")
-            if vit_conf < 0.5:
-                label_vit = "Unknown object"
+
+            label_vit = classes[pred.item()]
+
+            col1.subheader("ViT Prediction")
+
             col1.success(label_vit)
-            col1.metric("Confidence",f"{vit_conf * 100:.2f}%")
-            col1.progress(vit_conf)
-            col1.info(f"Inference time : {vit_time:.4f} sec")
-            top3_probs, top3_idx = torch.topk(probabilities, k=3, dim=1)
-            col1.write("### Top 3 Predictions")
-            for i in range(3):
-                cls = classes[top3_idx[0, i].item()]
-                score = top3_probs[0, i].item()
-                col1.write(f"• {cls} : {score * 100:.2f}%")
-        
+
+            col1.info(
+                f"Inference time : {vit_time:.4f} sec"
+            )
+
         # ================= YOLO =================
         if model_choice in ["YOLO", "Both"]:
 
