@@ -43,7 +43,7 @@ vit_model = load_vit()
 yolo_model = load_yolo()
 
  
-st.title("♻ AI Waste Classification System")
+st.title("♻ AI Waste Classification System (glass,plastic,metal)")
 st.markdown("### Comparison between ViT and YOLO")
 
 st.sidebar.header("Model Statistics")
