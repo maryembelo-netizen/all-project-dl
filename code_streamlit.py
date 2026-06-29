@@ -4,14 +4,16 @@ import timm
 from PIL import Image
 import torchvision.transforms as transforms
 from ultralytics import YOLO
-import json
 import time
 import pandas as pd
 
 # =========================
 # CONFIG
 # =========================
-st.set_page_config(page_title="AI Multi-Model System", layout="wide")
+st.set_page_config(
+    page_title="AI Multi-Model System",
+    layout="wide"
+)
 
 classes = ['glass', 'metal', 'plastic']
 device = torch.device("cpu")
@@ -25,47 +27,60 @@ transform = transforms.Compose([
 ])
 
 # =========================
-# LOAD MODELS (CACHE)
+# LOAD VIT
 # =========================
 @st.cache_resource
 def load_vit():
-    model = timm.create_model("vit_tiny_patch16_224", pretrained=False, num_classes=3)
-    model.load_state_dict(torch.load(
-        r"C:\Users\Mariem\PycharmProjects\PythonProject1\vit_finetuned.pth",
-        map_location=device
-    ))
+    model = timm.create_model(
+        "vit_tiny_patch16_224",
+        pretrained=False,
+        num_classes=3
+    )
+
+    model.load_state_dict(
+        torch.load(
+            "vit_finetuned.pth",
+            map_location=device
+        )
+    )
+
     model.eval()
     return model
 
+# =========================
+# LOAD YOLO
+# =========================
 @st.cache_resource
 def load_yolo():
-    return YOLO(r"C:\Users\Mariem\PycharmProjects\PythonProject1\runs\classify\train\weights\best.pt")
-
-vit_model = load_vit()
-yolo_model = load_yolo()
+    return YOLO("best.pt")
 
 # =========================
-# LOAD METRICS (optional files)
+# LOAD MODELS
 # =========================
-def load_metrics(path):
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except:
-        return None
+try:
+    vit_model = load_vit()
+except Exception as e:
+    st.error(f"Erreur chargement ViT : {e}")
+    vit_model = None
+
+try:
+    yolo_model = load_yolo()
+except Exception as e:
+    st.error(f"Erreur chargement YOLO : {e}")
+    yolo_model = None
 
 # =========================
-# UI TITLE
+# TITLE
 # =========================
 st.title("♻ AI Multi-Model Waste Classification System")
-st.markdown("ViT + YOLO + Comparison Dashboard (Local AI System)")
+st.markdown(
+    "### ViT + YOLO + Comparison Dashboard"
+)
 
 # =========================
 # SIDEBAR
 # =========================
 st.sidebar.header("📊 Metrics Dashboard")
-
-st.sidebar.write("Pre-calculated performance:")
 
 metrics_data = pd.DataFrame({
     "Model": ["ViT", "YOLO"],
@@ -77,30 +92,44 @@ metrics_data = pd.DataFrame({
 st.sidebar.dataframe(metrics_data)
 
 # =========================
-# TABS (IMPORTANT FOR PROJECT REQUIREMENT)
+# TABS
 # =========================
-tab1, tab2 = st.tabs(["🔍 Inference", "📊 Comparison"])
+tab1, tab2 = st.tabs([
+    "🔍 Inference",
+    "📊 Comparison"
+])
 
 # =========================
-# TAB 1 - INFERENCE
+# TAB 1
 # =========================
 with tab1:
 
-    uploaded_file = st.file_uploader("Upload image", type=["jpg", "png"])
+    uploaded_file = st.file_uploader(
+        "Upload image",
+        type=["jpg", "jpeg", "png"]
+    )
 
-    model_choice = st.selectbox("Choose Model", ["ViT", "YOLO", "Both"])
+    model_choice = st.selectbox(
+        "Choose Model",
+        ["ViT", "YOLO", "Both"]
+    )
 
-    if uploaded_file:
+    if uploaded_file is not None:
 
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Input Image", use_container_width=True)
+        image = Image.open(uploaded_file).convert("RGB")
+
+        st.image(
+            image,
+            caption="Input Image",
+            use_container_width=True
+        )
 
         img = transform(image).unsqueeze(0)
 
         col1, col2 = st.columns(2)
 
-        # ================= VI T =================
-        if model_choice in ["ViT", "Both"]:
+        # ================= VIT =================
+        if model_choice in ["ViT", "Both"] and vit_model:
 
             start = time.time()
 
@@ -115,11 +144,12 @@ with tab1:
             col1.info(f"Latency: {vit_time:.4f}s")
 
         # ================= YOLO =================
-        if model_choice in ["YOLO", "Both"]:
+        if model_choice in ["YOLO", "Both"] and yolo_model:
 
             start = time.time()
 
             results = yolo_model(image)
+
             probs = results[0].probs
 
             top1 = int(probs.top1)
@@ -127,19 +157,18 @@ with tab1:
 
             yolo_time = time.time() - start
 
-            col2.subheader("🚀 YOLO Result")
-
             if conf < 0.5:
                 label = "Unknown / Low Confidence"
             else:
                 label = classes[top1]
 
+            col2.subheader("🚀 YOLO Result")
             col2.success(label)
             col2.info(f"Confidence: {conf:.3f}")
             col2.info(f"Latency: {yolo_time:.4f}s")
 
 # =========================
-# TAB 2 - COMPARISON
+# TAB 2
 # =========================
 with tab2:
 
@@ -168,11 +197,6 @@ with tab2:
     - ViT is preferred for research accuracy.
     """)
 
-    st.success("🏆 Best Overall Model: YOLO (Speed + Accuracy balance)")
-
-
-
-
-
-
-
+    st.success(
+        "🏆 Best Overall Model: YOLO (Speed + Accuracy balance)"
+    )
